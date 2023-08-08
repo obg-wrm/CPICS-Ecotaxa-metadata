@@ -1,0 +1,85 @@
+---
+title: "CPICS images to Ecotaxa"
+author: "Will Major"
+date: "2023-08-04"
+output: html_document
+---
+
+#### Change log
+2023-08-08: Changes to original code
+
+#### RUN FIRST: Initial setup, package loading and plot style
+```{r setup, include=FALSE}
+# supress warnings
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(fig.width=9, fig.height=4)
+
+# load packages
+library("pacman")
+pacman::p_load(dplyr, datasets, readxl, NCmisc, stats, graphics, grDevices, caTools, ggpubr, marmap, forcats, stringr, purrr, readr, tidyr, tibble, ggplot2, tidyverse, oce, utils, sf, gsw, testthat, methods, base, ncdf4, dataPreparation, naniar, ggoce)
+
+# set working directory to the path of this .rmd file (does not always work first time)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# basic plot style
+plot_style <- ggplot() +
+    theme_bw() +
+    theme(plot.background = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.text = element_text(size=7),
+    legend.title = element_blank(),
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.key.size = unit(1, 'cm'),
+    axis.text = element_text(size = 8),
+    axis.title = element_text(size=10),
+    axis.line = element_line(color = 'black', linewidth=1.2),
+    axis.ticks = element_line(linewidth=1.2))
+
+# # site labels
+# st1 <- ggplot() + geom_text(aes(x=0, y=0, label = "a: St1"),parse = TRUE, size = 4, hjust = 1.5) + theme_void()
+# st2 <- ggplot() + geom_text(aes(x=0, y=0, label = "b: St2"),parse = TRUE, size = 4, hjust = 1.5) + theme_void()
+# st3 <- ggplot() + geom_text(aes(x=0, y=0, label = "c: St3"),parse = TRUE, size = 4, hjust = 1.5) + theme_void()
+
+```
+
+## CPICS metadata
+Output from this 
+```{r}
+# create file list of images and dataframe
+list_images <- dir("../data/images-yess")[grep(".png", dir("../data/images-yess"))]
+images <- data.frame(Filename = list_images)
+
+# create a list of the ROICoords
+dirs <- dir("../data/profiles")[grep("", dir("../data/profiles"))]
+df_rois <- vector()
+lines <- 0
+counter <- 0
+for (i in dirs) {
+  counter <- counter + 1
+  
+  # create path and load file
+  x <- (paste0("../data/profiles/", i, "/ROICoord/"))
+  rois <- dir(x)[grep(".txt", dir(x))]
+  rois <- paste0("../data/profiles/", i, "/ROICoord/",rois)
+  out_df <- read.table(rois, sep=",", header=F, dec=".")
+  colnames(out_df) <- c("ROI","Datetime","Filename","D1","D2","D3","D4","D5")
+  
+  # counter number of rows
+  rows <- nrow(out_df)
+  lines <- lines + rows
+
+  # add cruise
+  if (counter == 1) {out_df$Cruise <- "M185"}
+  else {out_df$Cruise <- "DY157"}
+  df_rois <- rbind(df_rois,out_df)
+  
+}
+
+df <- merge(df_rois,images,by="Filename")
+
+
+```
+
